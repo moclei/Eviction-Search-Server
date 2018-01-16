@@ -25,12 +25,12 @@ router.use(bodyParser.json());
 //Insert evictions
 router.post('/', function (req, res, next) {
     let sheetData = req.body.sheetData;
-    console.log("eviction.sql.route -> router.post -> insert evictions, sheetData = " + sheetData );
+    console.log("eviction.upload.sql.route -> router.post -> sheetData received. Attempting to process." );
 
     uploadEvictionSheet(sheetData, (err, successMessage, cursor) => {
         if (err) {
             next(err);
-            return;
+            return res.send('error: ' + error);
         }
         res.json({
             items: successMessage,
@@ -40,7 +40,7 @@ router.post('/', function (req, res, next) {
 });
 
 function convertToSoundex(s_src){
-    console.log("soundex");
+    // console.log("soundex");
     let s_rez = "0000" ;
     let new_code, prev, idx;
 
@@ -81,7 +81,7 @@ function uploadEvictionSheet(sheetData, cb){
         console.log("iterating through sheetData. On item: "  + i);
         let data = sheetData[i];
         let caseNumber = data[0];
-        console.log("caseNumber was: " + caseNumber)
+        // console.log("caseNumber was: " + caseNumber)
         if(typeof caseNumber !== 'undefined' && caseNumber) {
 
             let caseFileDate = data[1];
@@ -105,14 +105,14 @@ function uploadEvictionSheet(sheetData, cb){
             let caseTypDesc = data[19];
             let disposition = data[20];
             let defDob = data[21];
-            console.log("Assigned all variables");
+            // console.log("Assigned all variables");
 
             let stmtStr = 'INSERT INTO `judgementsandfilings` '
                 + '(Defendant, DefendantAddress, DefendantCity, DefendantState, DefendantZIP, DefendantDOB, PlaintiffName, PlaintiffAddress, PlaintiffCity, PlaintiffState, '
                 + ' PlaintiffZIP, PlaintiffPhone, PlaintiffCorp, CaseFileDate, CaseNumber, CaseStatusCD, CaseStatus, CaseTypeDescription, DispositionDate, DispositionAmount, '
                 + ' Disposition, PersonAliasID, DefendantFirstName, DefendantLastName, SoundexDefFirstName, SoundexDefLastName, ev_added_date, ev_is_debug, ev_is_writ) '
                 + ' values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-            console.log("Created statement strings");
+            // console.log("Created statement strings");
 
             let defDob_Date = null;
             if (defDob) {
@@ -124,25 +124,25 @@ function uploadEvictionSheet(sheetData, cb){
                     defDob_Date = null;
                 }
             }
-            console.log("Created defendant dob");
+            // console.log("Created defendant dob");
 
             let caseFileDate_Date = new Date(caseFileDate);
             // let jdbcCaseFileDate = Jdbc.newDate(caseFileDate_Date);
 
             let dispositionDt_Date = new Date(dispositionDate);
             // let jdbcDispositionDt = Jdbc.newDate(dispositionDt_Date);
-            console.log("Created other dates");
-            console.log("Splitting names. Defendant Name: " + defendant);
+            // console.log("Created other dates");
+            // console.log("Splitting names. Defendant Name: " + defendant);
             let defNameSplit = defendant.split(',');
             let defName1 = defNameSplit[0];
-            console.log("Split names");
+            // console.log("Split names");
             let hasLastName = false;
             let defName2, sDefName1, sDefName2;
-            console.log("Created defendant name: names split - number of names: " + defNameSplit.length);
+            // console.log("Created defendant name: names split - number of names: " + defNameSplit.length);
             if (defNameSplit.length > 1) {
                 defName1 = defNameSplit[1];
                 defName2 = defNameSplit[0];
-                console.log("Created defendant name: before lastname soundex");
+                // console.log("Created defendant name: before lastname soundex");
                 sDefName2 = convertToSoundex(defName2);
                 hasLastName = true;
             }
@@ -150,9 +150,9 @@ function uploadEvictionSheet(sheetData, cb){
                 defName2 = "";
                 sDefName2 = "";
             }
-            console.log("Created defendant names");
+            // console.log("Created defendant names");
             sDefName1 = convertToSoundex(defName1);
-            console.log("Prepared all statement values");
+            // console.log("Prepared all statement values");
             let stmtVals = [defendant, defendantAddress, cityName, stateCd, postalCd, defDob_Date];
 
             /*if(!jdbcDefendantDOB){
@@ -162,13 +162,13 @@ function uploadEvictionSheet(sheetData, cb){
                 stmtVals.push(jdbcDefendantDOB);
             }*/
 
-            console.log("Connection put together. StmtStr = " + stmtStr + ", stmtVals = " + stmtVals);
+            // console.log("Connection put together. StmtStr = " + stmtStr + ", stmtVals = " + stmtVals);
             stmtVals.push(plaintiff, plaintiffAddress, plCity, plState, plZip,
                 plaintiffPhone, corp, caseFileDate_Date, caseNumber, caseStatusCd,
                 caseStatus, caseTypDesc, dispositionDt_Date, dispAmt,
                 disposition, personAliasId, defName1, defName2, sDefName1, sDefName2,
                 addedDate, true, false);
-            console.log("Connection put together. StmtStr = " + stmtStr + ", stmtVals = " + stmtVals);
+            // console.log("Connection put together. StmtStr = " + stmtStr + ", stmtVals = " + stmtVals);
             connection.query(stmtStr, stmtVals,
                 (err, results) => {
                     if (err) {
@@ -181,8 +181,8 @@ function uploadEvictionSheet(sheetData, cb){
             console.log("Insert Query Complete ");
         }
     }
-    console.log("Returning success message ");
-    return 'Items Uploaded';
+    console.log("End of upload");
+   // return 'Items Uploaded';
 }
 
 
