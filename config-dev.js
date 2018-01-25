@@ -26,11 +26,14 @@ nconf
         'DATA_BACKEND',
         'GCLOUD_PROJECT',
         'INSTANCE_CONNECTION_NAME',
+        'MONGO_URL',
+        'MONGO_COLLECTION',
         'MYSQL_USER',
         'MYSQL_PASSWORD',
         'NODE_ENV',
         'PORT'
     ])
+    // 3. Config file
     .file({ file: path.join(__dirname, 'config.json') })
     // 4. Defaults
     .defaults({
@@ -38,9 +41,16 @@ nconf
         // configure the appropriate settings for each storage engine below.
         // If you are unsure, use datastore as it requires no additional
         // configuration.
-        DATA_BACKEND: 'cloudsql',
+        DATA_BACKEND: 'datastore',
+
         // This is the id of your project in the Google Cloud Developers Console.
         GCLOUD_PROJECT: '',
+
+        // MongoDB connection string
+        // https://docs.mongodb.org/manual/reference/connection-string/
+        MONGO_URL: 'mongodb://localhost:27017',
+        MONGO_COLLECTION: 'books',
+
         MYSQL_USER: 'marc',
         MYSQL_PASSWORD: 'avatar',
 
@@ -56,6 +66,9 @@ if (nconf.get('DATA_BACKEND') === 'cloudsql') {
     if (nconf.get('NODE_ENV') === 'production') {
         checkConfig('INSTANCE_CONNECTION_NAME');
     }
+} else if (nconf.get('DATA_BACKEND') === 'mongodb') {
+    checkConfig('MONGO_URL');
+    checkConfig('MONGO_COLLECTION');
 }
 
 function checkConfig (setting) {
