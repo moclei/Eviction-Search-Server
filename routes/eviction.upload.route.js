@@ -6,8 +6,8 @@ const router = express.Router();
 const bodyParser = require('body-parser');
 const mysql = require('mysql');
 const config = require('../config');
-const fs = require('fs');
-const readline = require('readline');
+// const fs = require('fs');
+// const readline = require('readline');
 
 const options = {
     user: config.get('MYSQL_USER'),
@@ -24,6 +24,7 @@ router.use(bodyParser.json());
 
 //Insert evictions
 router.post('/', function (req, res, next) {
+    /** @namespace req.body.sheetData */
     let sheetData = req.body.sheetData;
     console.log("eviction.upload.sql.route -> router.post -> sheetData received. Attempting to process." );
 
@@ -60,7 +61,7 @@ function convertToSoundex(s_src){
             if (s_code.indexOf(cur_char) >= 0)
             { new_code = a_codes[ s_code ] ; break ; }
 
-        if (new_code != prev && new_code != "0" )  {
+        if (new_code !== prev && new_code !== "0" )  {
             s_rez += new_code;
         }
 
@@ -75,10 +76,16 @@ function uploadEvictionSheet(sheetData, cb){
     let addedDate = new Date();
     // let jdbcDateAdded = Jdbc.newDate(addedDate);
     console.log("uploadJudgementSheet: number source objects to add: "  + sheetData.length);
+    var records = [];
+    let stmtStr = 'INSERT INTO `judgementsandfilings` '
+        + '(Defendant, DefendantAddress, DefendantCity, DefendantState, DefendantZIP, DefendantDOB, PlaintiffName, PlaintiffAddress, PlaintiffCity, PlaintiffState, '
+        + ' PlaintiffZIP, PlaintiffPhone, PlaintiffCorp, CaseFileDate, CaseNumber, CaseStatusCD, CaseStatus, CaseTypeDescription, DispositionDate, DispositionAmount, '
+        + ' Disposition, PersonAliasID, DefendantFirstName, DefendantLastName, SoundexDefFirstName, SoundexDefLastName, ev_added_date, ev_is_debug, ev_is_writ) '
+        + ' VALUES ?';
 
     for(let i=2;i<sheetData.length;i++){
 
-        console.log("iterating through sheetData. On item: "  + i);
+        // console.log("iterating through sheetData. On item: "  + i);
         let data = sheetData[i];
         let caseNumber = data[0];
         // console.log("caseNumber was: " + caseNumber)
@@ -106,23 +113,21 @@ function uploadEvictionSheet(sheetData, cb){
             let disposition = data[20];
             let defDob = data[21];
             // console.log("Assigned all variables");
-
-            let stmtStr = 'INSERT INTO `judgementsandfilings` '
-                + '(Defendant, DefendantAddress, DefendantCity, DefendantState, DefendantZIP, DefendantDOB, PlaintiffName, PlaintiffAddress, PlaintiffCity, PlaintiffState, '
-                + ' PlaintiffZIP, PlaintiffPhone, PlaintiffCorp, CaseFileDate, CaseNumber, CaseStatusCD, CaseStatus, CaseTypeDescription, DispositionDate, DispositionAmount, '
-                + ' Disposition, PersonAliasID, DefendantFirstName, DefendantLastName, SoundexDefFirstName, SoundexDefLastName, ev_added_date, ev_is_debug, ev_is_writ) '
-                + ' values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
             // console.log("Created statement strings");
 
             let defDob_Date = null;
             if (defDob) {
                 if (defDob.length === 8) {
-                    defDob_Date = new Date(defDob.substring(4), parseInt(defDob.substring(0, 2), 10) - 1, defDob.substring(2, 4) + 1);
+                    defDob_Date = new Date(defDob.substring(4), (parseInt(defDob.substring(0, 2), 10) - 1), (defDob.substring(2, 4) + 1) );
                     // jdbcDefendantDOB = Jdbc.newDate(defDob_Date);
                 }
                 else {
                     defDob_Date = null;
                 }
+            }
+
+            if (dispAmt === null || dispAmt.trim() === ''){
+                dispAmt = -1;
             }
             // console.log("Created defendant dob");
 
@@ -140,8 +145,8 @@ function uploadEvictionSheet(sheetData, cb){
             let defName2, sDefName1, sDefName2;
             // console.log("Created defendant name: names split - number of names: " + defNameSplit.length);
             if (defNameSplit.length > 1) {
-                defName1 = defNameSplit[1];
-                defName2 = defNameSplit[0];
+                defName1 = defNameSplit[1].trim();
+                defName2 = defNameSplit[0].trim();
                 // console.log("Created defendant name: before lastname soundex");
                 sDefName2 = convertToSoundex(defName2);
                 hasLastName = true;
@@ -154,22 +159,16 @@ function uploadEvictionSheet(sheetData, cb){
             sDefName1 = convertToSoundex(defName1);
             // console.log("Prepared all statement values");
             let stmtVals = [defendant, defendantAddress, cityName, stateCd, postalCd, defDob_Date];
-
-            /*if(!jdbcDefendantDOB){
-                stmtVals.push(Jdbc.Types.DATE)
-            }
-            else{
-                stmtVals.push(jdbcDefendantDOB);
-            }*/
-
             // console.log("Connection put together. StmtStr = " + stmtStr + ", stmtVals = " + stmtVals);
             stmtVals.push(plaintiff, plaintiffAddress, plCity, plState, plZip,
                 plaintiffPhone, corp, caseFileDate_Date, caseNumber, caseStatusCd,
                 caseStatus, caseTypDesc, dispositionDt_Date, dispAmt,
                 disposition, personAliasId, defName1, defName2, sDefName1, sDefName2,
                 addedDate, true, false);
+
+            records.push(stmtVals);
             // console.log("Connection put together. StmtStr = " + stmtStr + ", stmtVals = " + stmtVals);
-            connection.query(stmtStr, stmtVals,
+           /*  connection.query(stmtStr, stmtVals,
                 (err, results) => {
                     if (err) {
                         cb(err);
@@ -178,13 +177,24 @@ function uploadEvictionSheet(sheetData, cb){
                     cb(null, results);
                 }
             );
-            console.log("Insert Query Complete ");
+
+            var query = connection.query(stmtStr, [records], function(err, result) {
+                console.log(result);
+            });
+
+            connection.end(); */
+            // console.log("Insert Query Complete ");
         }
+
     }
-    console.log("End of upload");
+
+    connection.query(stmtStr, [records], function(err, result) {
+        if (err) throw err;
+        console.log('Insert query successful. Result: ' + result);
+    });
+    // console.log("End of upload");
    // return 'Items Uploaded';
 }
-
 
 /**
  * You first need to create a formatting function to pad numbers to two digits…

@@ -69,13 +69,21 @@ router.post('/', function (req, res, next) {
     /** @namespace req.body.defendantLastName */
     /** @namespace req.body.soundexCheck */
     /** @namespace req.body.isDebug */
+    /** @namespace req.body.useFilings */
+    /** @namespace req.body.useJudgments */
     let firstName = req.body.defendantFirstName;
     let lastName = req.body.defendantLastName;
     let soundex = req.body.soundexCheck;
     let isDebug = req.body.isDebug;
-    console.log("eviction.sql.route -> router.post -> firstName = " + firstName + ", lastName = " + lastName + ", soundex = " + soundex);
+    let useFilings = req.body.useFilings;
+    let useJudgments = req.body.useJudgments;
+    console.log("eviction.sql.route -> router.post -> firstName = " + firstName
+        + ", lastName = " + lastName
+        + ", soundex = " + soundex
+        + ", useFilings = " + useFilings
+        + ", useJudgments = " + useJudgments);
 
-    search(firstName, lastName, soundex, isDebug, (err, entities, cursor) => {
+    search(firstName, lastName, soundex, isDebug, useFilings, useJudgments, (err, entities, cursor) => {
         if (err) {
             next(err);
             return;
@@ -137,11 +145,17 @@ function list (limit, token, cb) {
 // [END list]
 
 // [START search]
-function search (firstName, lastName, soundex, isDebug, cb) {
+function search (firstName, lastName, soundex, isDebug, useFilings, useJudgments, cb) {
     console.log("eviction.sql.route -> search()");
+    let finalQuery = '';
+    let queryString = "SELECT * FROM `judgementsandfilings` WHERE ";
+    let soundexQueryExt = " SoundexDefFirstName = ? AND SoundexDefLastName = ? ";
+    let specificQueryExt = " DefendantFirstName = ? AND DefendantLastName = ? ";
+    let filingsOnlyQueryExt = " AND DispositionAmount < 0";
+    let judgmentsOnlyQueryExt = " AND DispositionAmount > -1";
+    finalQuery = queryString;
     if(isDebug){
         connection.query(
-           // "SELECT * FROM `judgementsandfilings` WHERE ev_is_debug = true",
             "SELECT * FROM `judgementsandfilings` WHERE ev_added_date > '2018-01-01'",
             (err, results) => {
                 if (err) {
@@ -155,39 +169,48 @@ function search (firstName, lastName, soundex, isDebug, cb) {
     }
     else{
         if(soundex){
-            // console.log("eviction.sql.route.js -> whatevs");
-            // whatevs(firstName);
-            // console.log("eviction.sql.route.js -> whatevs over");
-            // soundex(firstName);
+            finalQuery += soundexQueryExt;
+            if(useFilings && !useJudgments){
+                finalQuery += filingsOnlyQueryExt;
+                console.log('eviction.sql.route.js -> search() with soundex, useFilingsOnly');
+            }
+            else if(useJudgments && !useFilings){
+                finalQuery += judgmentsOnlyQueryExt;
+                console.log('eviction.sql.route.js -> search() with soundex, useJudgmentsOnly');
+            }
+            // Old query: "SELECT * FROM `judgementsandfilings` WHERE SoundexDefFirstName = ? AND SoundexDefLastName = ?"
             console.log("eviction.sql.route.js -> submitting query to database");
-            //token = token ? parseInt(token, 10) : 0;
-            connection.query(
-                "SELECT * FROM `judgementsandfilings` WHERE SoundexDefFirstName = ? AND SoundexDefLastName = ?", [convertToSoundex(firstName), convertToSoundex(lastName)],
+            connection.query(finalQuery, [convertToSoundex(firstName), convertToSoundex(lastName)],
                 (err, results) => {
                     if (err) {
+                        console.log("eviction.sql.route.js -> err: " + err);
                         cb(err);
                         return;
                     }
-                    console.log("eviction.sql.route.js -> results: " + results);
                     cb(null, results);
-                }
-            );
+                });
         }
         else{
+            finalQuery += specificQueryExt;
+            if(useFilings && !useJudgments){
+                console.log('eviction.sql.route.js -> search() without soundex, useFilingsOnly');
+                finalQuery += filingsOnlyQueryExt;
+            }
+            else if(useJudgments && !useFilings){
+                console.log('eviction.sql.route.js -> search() without soundex, useJudgementsOnly');
+                finalQuery += judgmentsOnlyQueryExt;
+            }
             console.log("eviction.sql.route.js -> search() without soundex");
-            //token = token ? parseInt(token, 10) : 0;
-            connection.query(
-                "SELECT * FROM `judgementsandfilings` WHERE DefendantFirstName = ? AND DefendantLastName = ?", [firstName, lastName],
+            // Old query string: "SELECT * FROM `judgementsandfilings` WHERE DefendantFirstName = ? AND DefendantLastName = ?"
+            connection.query(finalQuery, [firstName, lastName],
                 (err, results) => {
                     if (err) {
                         cb(err);
                         console.log("eviction.sql.route.js -> search() without soundex -> there was an error: " +  err);
                         return;
                     }
-                    //console.log("eviction.sql.route.js -> results: " + results);
                     cb(null, results);
-                }
-            );
+                });
         }
     }
 
