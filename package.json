@@ -15,6 +15,7 @@
     "e2e": "ng e2e"
   },
   "dependencies": {
+    "@google-cloud/debug-agent": "^2.3.2",
     "@google-cloud/storage": "^1.5.2",
     "body-parser": "~1.17.1",
     "cookie-parser": "~1.4.3",

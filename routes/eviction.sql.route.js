@@ -22,11 +22,12 @@ const options = {
 };
 
 if (config.get('INSTANCE_CONNECTION_NAME') && config.get('NODE_ENV') === 'production') {
-    options.socketPath = "cloudsql/${config.get('INSTANCE_CONNECTION_NAME')}";
+    console.log("eviction.sql.route.js -> config.get(instance connection name): "+config.get('INSTANCE_CONNECTION_NAME'));
+    options.socketPath = "/cloudsql/${config.get('INSTANCE_CONNECTION_NAME')}";
 }
 
 const connection = mysql.createConnection(options);
-
+console.log("eviction.sql.route.js ->connectionCreated");
 
 // Automatically parse request body as JSON
 router.use(bodyParser.json());
@@ -283,6 +284,7 @@ function getMostRecent(cb) {
         "SELECT * FROM `judgementsandfilings` ORDER BY ev_added_date DESC LIMIT 1",
         (err, results) => {
             if (err) {
+                console.log("eviction.sql.route.js -> getMostRecent() -> err: " + err);
                 cb(err);
                 return;
             }

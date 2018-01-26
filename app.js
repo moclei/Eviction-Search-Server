@@ -1,9 +1,11 @@
+require('@google-cloud/debug-agent').start();
 var express = require('express');
 var path = require('path');
 var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
+
 
 var appRoutes = require('./routes/app');
 var evictionRoutes = require('./routes/eviction.sql.route');
@@ -53,7 +55,7 @@ app.use(function(err, req, res, next) {
 
   // render the error page
   res.status(err.status || 500);
-  res.render('error');
+  res.render('error: ' + err.toString());
 });
 
 module.exports = app;
