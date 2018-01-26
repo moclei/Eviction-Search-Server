@@ -1,19 +1,14 @@
-
 /**
  * Created by moclei on 5/27/17.
  */
-
-
 const express = require('express');
 const router = express.Router();
 const bodyParser = require('body-parser');
-// const extend = require('lodash').assign;
 const mysql = require('mysql');
 const config = require('../config');
 // const fs = require('fs');
 // const readline = require('readline');
-
-// const Evictions = require('../models/eviction.model');
+// const extend = require('lodash').assign;
 
 const options = {
     user: config.get('MYSQL_USER'),
@@ -22,12 +17,12 @@ const options = {
 };
 
 if (config.get('INSTANCE_CONNECTION_NAME') && config.get('NODE_ENV') === 'production') {
-    console.log("eviction.sql.route.js -> config.get(instance connection name): "+config.get('INSTANCE_CONNECTION_NAME'));
-    options.socketPath = "/cloudsql/${config.get('INSTANCE_CONNECTION_NAME')}";
+    options.socketPath = "cloudsql/${config.get('INSTANCE_CONNECTION_NAME')}";
 }
 
+console.log("eviction.sql.route.js -> mysql.createConnection(options); creating")
 const connection = mysql.createConnection(options);
-console.log("eviction.sql.route.js ->connectionCreated");
+console.log("eviction.sql.route.js -> mysql.createConnection(options); created");
 
 // Automatically parse request body as JSON
 router.use(bodyParser.json());
@@ -38,19 +33,7 @@ router.use(bodyParser.json());
  * Retrieve most recent record
  */
 router.get('/', (req, res, next) => {
-    /** @namespace req.query.pageToken */
-    /*
-    list(10, req.query.pageToken, (err, entities, cursor) => {
-        if (err) {
-            next(err);
-            return;
-        }
-        res.json({
-            items: entities,
-            nextPageToken: cursor
-        });
-    });
-    */
+    console.log("eviction.sql.route.js -> router.get()");
     getMostRecent((err, entities)=> {
         if (err) {
             next(err);
@@ -72,7 +55,7 @@ router.post('/', function (req, res, next) {
     /** @namespace req.body.isDebug */
     /** @namespace req.body.useFilings */
     /** @namespace req.body.useJudgments */
-    let firstName = req.body.defendantFirstName;
+    let firsearchstName = req.body.defendantFirstName;
     let lastName = req.body.defendantLastName;
     let soundex = req.body.soundexCheck;
     let isDebug = req.body.isDebug;
@@ -218,66 +201,7 @@ function search (firstName, lastName, soundex, isDebug, useFilings, useJudgments
 }
 // [END search]
 
-/*
-// [START search]
-function search (firstName, lastName, soundex, isDebug, cb) {
-    console.log("eviction.sql.route -> search()");
-    if(isDebug){
-        connection.query(
-            // "SELECT * FROM `judgementsandfilings` WHERE ev_is_debug = true",
-            "SELECT * FROM `judgementsandfilings` WHERE CaseFileDate > '2017-01-01'",
-            (err, results) => {
-            if (err) {
-                cb(err);
-                return;
-            }
-            console.log("eviction.sql.route.js -> results: " + results);
-        cb(null, results);
-    }
-    );
-    }
-    else{
-        if(soundex){
-            // console.log("eviction.sql.route.js -> whatevs");
-            // whatevs(firstName);
-            // console.log("eviction.sql.route.js -> whatevs over");
-            // soundex(firstName);
-            console.log("eviction.sql.route.js -> submitting query to database");
-            //token = token ? parseInt(token, 10) : 0;
-            connection.query(
-                "SELECT * FROM `judgementsandfilings` WHERE SoundexDefFirstName = ? AND SoundexDefLastName = ?", [convertToSoundex(firstName), convertToSoundex(lastName)],
-                (err, results) => {
-                if (err) {
-                    cb(err);
-                    return;
-                }
-                console.log("eviction.sql.route.js -> results: " + results);
-            cb(null, results);
-        }
-        );
-        }
-        else{
-            console.log("eviction.sql.route.js -> search() without soundex");
-            //token = token ? parseInt(token, 10) : 0;
-            connection.query(
-                "SELECT * FROM `judgementsandfilings` WHERE DefendantFirstName = ? AND DefendantLastName = ?", [firstName, lastName],
-                (err, results) => {
-                if (err) {
-                    cb(err);
-                    console.log("eviction.sql.route.js -> search() without soundex -> there was an error: " +  err);
-                    return;
-                }
-                //console.log("eviction.sql.route.js -> results: " + results);
-                cb(null, results);
-        }
-        );
-        }
-    }
-
-}
-// [END search]
-*/
-// [START search]
+// [START getMostRecent]
 function getMostRecent(cb) {
     console.log("eviction.sql.route.js -> getMostRecent()");
     connection.query(
@@ -292,7 +216,7 @@ function getMostRecent(cb) {
         }
     );
 }
-// [END search]
+// [END getMostRecent]
 
 function convertToSoundex(s_src){
     console.log("soundex");
