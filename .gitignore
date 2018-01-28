@@ -33,6 +33,8 @@ npm-debug.log
 testem.log
 /typings
 cloud_sql_proxy
+app.yaml
+client-secret.json
 
 # e2e
 /e2e/*.js

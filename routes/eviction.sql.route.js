@@ -17,7 +17,10 @@ const options = {
 };
 
 if (config.get('INSTANCE_CONNECTION_NAME') && config.get('NODE_ENV') === 'production') {
-    options.socketPath = "cloudsql/${config.get('INSTANCE_CONNECTION_NAME')}";
+    const connName = config.get('INSTANCE_CONNECTION_NAME');
+    const connBase = "/cloudsql/";
+    const connString = connBase + connName;
+    options.socketPath = connString;
 }
 
 console.log("eviction.sql.route.js -> mysql.createConnection(options); creating")
@@ -55,7 +58,7 @@ router.post('/', function (req, res, next) {
     /** @namespace req.body.isDebug */
     /** @namespace req.body.useFilings */
     /** @namespace req.body.useJudgments */
-    let firsearchstName = req.body.defendantFirstName;
+    let firstName = req.body.defendantFirstName;
     let lastName = req.body.defendantLastName;
     let soundex = req.body.soundexCheck;
     let isDebug = req.body.isDebug;
