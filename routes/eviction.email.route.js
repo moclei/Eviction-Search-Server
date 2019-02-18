@@ -62,10 +62,16 @@ function sendEmail(messageData, cb){
         pass: options.googlePassword,
         to:   email,
         from: 'Bexar County Evictions Search',
-        // from:    credentials.user             // from: by default equals to user
-        // replyTo: credentials.user             // replyTo: by default undefined
+        // from:    credentials.user
+        // from: by default equals to user
+        // replyTo: credentials.user
+        // replyTo: by default undefined
         subject: 'Your Bexar County Evictions question',
-        text:    'Hi ' + name + ',\n\n Thank you for your enquiry. We will get back to you as soon as possible.\n\n The Bexar County Eviction Search Team.',         // Plain text
+        text:    'Hi ' + name + ',\n\n Thank you for your enquiry. ' +
+            'We will get back to you as soon as ' +
+            'possible.\n\n The Bexar County ' +
+            'Eviction Search Team.',
+        // Plain text
         html:    htmlBody            // HTML
     });
 
@@ -99,7 +105,12 @@ function twoDigits(d) {
  * makes sense.
  **/
 Date.prototype.toMysqlFormat = function() {
-    return this.getUTCFullYear() + "-" + twoDigits(1 + this.getUTCMonth()) + "-" + twoDigits(this.getUTCDate()) + " " + twoDigits(this.getUTCHours()) + ":" + twoDigits(this.getUTCMinutes()) + ":" + twoDigits(this.getUTCSeconds());
+    return this.getUTCFullYear() + "-"
+        + twoDigits(1 + this.getUTCMonth()) + "-"
+        + twoDigits(this.getUTCDate()) + " "
+        + twoDigits(this.getUTCHours()) + ":"
+        + twoDigits(this.getUTCMinutes()) + ":"
+        + twoDigits(this.getUTCSeconds());
 };
 
 module.exports = router;

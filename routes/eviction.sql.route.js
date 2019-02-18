@@ -6,9 +6,6 @@ const router = express.Router();
 const bodyParser = require('body-parser');
 const mysql = require('mysql');
 const config = require('../config');
-// const fs = require('fs');
-// const readline = require('readline');
-// const extend = require('lodash').assign;
 
 const options = {
     user: config.get('MYSQL_USER'),
@@ -26,8 +23,6 @@ if (config.get('INSTANCE_CONNECTION_NAME') && config.get('NODE_ENV') === 'produc
 console.log("eviction.sql.route.js -> mysql.createConnection(options); creating")
 const connection = mysql.createConnection(options);
 console.log("eviction.sql.route.js -> mysql.createConnection(options); created");
-
-// Automatically parse request body as JSON
 router.use(bodyParser.json());
 
 /**
@@ -36,8 +31,37 @@ router.use(bodyParser.json());
  * Retrieve most recent record
  */
 router.get('/', (req, res, next) => {
-    console.log("eviction.sql.route.js -> router.get()");
-    getMostRecent((err, entities)=> {
+    const id = req.query.id;
+    if (id === 'recent') {
+        console.log('Getting most recent');
+        getMostRecent((err, entities)=> {
+            if (err) {
+                next(err);
+                return;
+            }
+            res.json({
+                items: entities
+            });
+        });
+    }
+    console.log("eviction.sql.route.js -> router.get(), id: " + id);
+    searchById(id, (err, entities, cursor) => {
+        if (err) {
+            next(err);
+            return;
+        }
+        res.json({
+            items: entities,
+            nextPageToken: cursor
+        });
+    });
+
+});
+
+router.get('/countrecent', (req, res, next) => {
+    // const month = req.query.month;
+    // console.log('Getting count of most recent for month #' + month);
+    getCountRecent((err, entities)=> {
         if (err) {
             next(err);
             return;
@@ -46,7 +70,7 @@ router.get('/', (req, res, next) => {
             items: entities
         });
     });
-});
+})
 
 /**
  * Search evictions
@@ -204,14 +228,50 @@ function search (firstName, lastName, soundex, isDebug, useFilings, useJudgments
 }
 // [END search]
 
+// [START search]
+function searchById(id, cb) {
+    console.log("eviction.sql.route -> searchById() id=" + id);
+    let queryString = "SELECT * FROM `judgementsandfilings` WHERE idJudgementsAndFilings = ?";
+    connection.query(queryString, [id],
+        (err, results) => {
+            if (err) {
+                cb(err);
+                console.log("eviction.sql.route.js -> search() without soundex -> there was an error: " +  err);
+                return;
+            }
+            cb(null, results);
+        });
+
+}
+// [END search]
+
 // [START getMostRecent]
 function getMostRecent(cb) {
     console.log("eviction.sql.route.js -> getMostRecent()");
     connection.query(
-        "SELECT * FROM `judgementsandfilings` ORDER BY ev_added_date DESC LIMIT 1",
+        "SELECT * FROM `judgementsandfilings` ORDER BY CaseFileDate DESC LIMIT 5",
         (err, results) => {
             if (err) {
                 console.log("eviction.sql.route.js -> getMostRecent() -> err: " + err);
+                cb(err);
+                return;
+            }
+            cb(null, results);
+        }
+    );
+}
+
+
+// [START getCountRecent]
+function getCountRecent(cb) {
+    let today = new Date();
+    let todayStr = formatDate(today);
+    console.log("eviction.sql.route.js -> getCountRecent()");
+    connection.query(
+        "SELECT COUNT(CaseNumber) FROM `judgementsandfilings` WHERE ev_added_date=CURDATE()",
+        (err, results) => {
+            if (err) {
+                console.log("eviction.sql.route.js -> getCountRecent() -> err: " + err);
                 cb(err);
                 return;
             }
@@ -272,5 +332,16 @@ Date.prototype.toMysqlFormat = function() {
     return this.getUTCFullYear() + "-" + twoDigits(1 + this.getUTCMonth()) + "-" + twoDigits(this.getUTCDate()) + " " + twoDigits(this.getUTCHours()) + ":" + twoDigits(this.getUTCMinutes()) + ":" + twoDigits(this.getUTCSeconds());
 };
 
+function formatDate(date) {
+    let d = new Date(date),
+        month = '' + (d.getMonth() + 1),
+        day = '' + d.getDate(),
+        year = d.getFullYear();
+
+    if (month.length < 2) month = '0' + month;
+    if (day.length < 2) day = '0' + day;
+
+    return [year, month, day].join('-');
+}
 
 module.exports = router;

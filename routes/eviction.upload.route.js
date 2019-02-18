@@ -6,8 +6,6 @@ const router = express.Router();
 const bodyParser = require('body-parser');
 const mysql = require('mysql');
 const config = require('../config');
-// const fs = require('fs');
-// const readline = require('readline');
 
 const options = {
     user: config.get('MYSQL_USER'),
@@ -16,10 +14,15 @@ const options = {
 };
 
 if (config.get('INSTANCE_CONNECTION_NAME') && config.get('NODE_ENV') === 'production') {
-    options.socketPath = "cloudsql/${config.get('INSTANCE_CONNECTION_NAME')}";
+    const connName = config.get('INSTANCE_CONNECTION_NAME');
+    const connBase = "/cloudsql/";
+    const connString = connBase + connName;
+    options.socketPath = connString;
 }
 
+console.log("eviction.upload.route.js -> mysql.createConnection(options); creating")
 const connection = mysql.createConnection(options);
+console.log("eviction.upload.route.js -> mysql.createConnection(options); created");
 router.use(bodyParser.json());
 
 //Insert evictions
@@ -78,9 +81,16 @@ function uploadEvictionSheet(sheetData, cb){
     console.log("uploadJudgementSheet: number source objects to add: "  + sheetData.length);
     var records = [];
     let stmtStr = 'INSERT INTO `judgementsandfilings` '
-        + '(Defendant, DefendantAddress, DefendantCity, DefendantState, DefendantZIP, DefendantDOB, PlaintiffName, PlaintiffAddress, PlaintiffCity, PlaintiffState, '
-        + ' PlaintiffZIP, PlaintiffPhone, PlaintiffCorp, CaseFileDate, CaseNumber, CaseStatusCD, CaseStatus, CaseTypeDescription, DispositionDate, DispositionAmount, '
-        + ' Disposition, PersonAliasID, DefendantFirstName, DefendantLastName, SoundexDefFirstName, SoundexDefLastName, ev_added_date, ev_is_debug, ev_is_writ) '
+        + '(Defendant, DefendantAddress, DefendantCity, ' +
+        'DefendantState, DefendantZIP, DefendantDOB, ' +
+        'PlaintiffName, PlaintiffAddress, PlaintiffCity, ' +
+        'PlaintiffState, '
+        + ' PlaintiffZIP, PlaintiffPhone, PlaintiffCorp, ' +
+        'CaseFileDate, CaseNumber, CaseStatusCD, CaseStatus, ' +
+        'CaseTypeDescription, DispositionDate, DispositionAmount, '
+        + ' Disposition, PersonAliasID, DefendantFirstName, ' +
+        'DefendantLastName, SoundexDefFirstName, SoundexDefLastName, ' +
+        'ev_added_date, ev_is_debug, ev_is_writ) '
         + ' VALUES ?';
 
     for(let i=2;i<sheetData.length;i++){
@@ -118,7 +128,9 @@ function uploadEvictionSheet(sheetData, cb){
             let defDob_Date = null;
             if (defDob) {
                 if (defDob.length === 8) {
-                    defDob_Date = new Date(defDob.substring(4), (parseInt(defDob.substring(0, 2), 10) - 1), (defDob.substring(2, 4) + 1) );
+                    defDob_Date = new Date(defDob.substring(4),
+                        (parseInt(defDob.substring(0, 2), 10) - 1),
+                        (defDob.substring(2, 4) + 1) );
                     // jdbcDefendantDOB = Jdbc.newDate(defDob_Date);
                 }
                 else {
@@ -212,8 +224,9 @@ function twoDigits(d) {
  * makes sense.
  **/
 Date.prototype.toMysqlFormat = function() {
-    return this.getUTCFullYear() + "-" + twoDigits(1 + this.getUTCMonth()) + "-" + twoDigits(this.getUTCDate()) + " " + twoDigits(this.getUTCHours()) + ":" + twoDigits(this.getUTCMinutes()) + ":" + twoDigits(this.getUTCSeconds());
+    return this.getUTCFullYear() + "-" + twoDigits(1 + this.getUTCMonth())
+        + "-" + twoDigits(this.getUTCDate()) + " " + twoDigits(this.getUTCHours())
+        + ":" + twoDigits(this.getUTCMinutes()) + ":" + twoDigits(this.getUTCSeconds());
 };
-
 
 module.exports = router;
